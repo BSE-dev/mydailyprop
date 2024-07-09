@@ -2,7 +2,7 @@
 name = "mydailyprop"
 version = "0.1.0"
 description = "A LangGraph + Reflex propaganda analyser"
-license = "Apache-2.0"
+license = "Apache 2.0"
 authors = ["Pierre Guirriec <pierre.guirriec@gmail.com>"]
 readme = "README.md"
 
