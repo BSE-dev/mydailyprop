@@ -8,7 +8,6 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 
 from langgraph.graph import StateGraph
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 from langchain import hub
 from langchain_community.document_loaders import FireCrawlLoader
 import reflex as rx  # type: ignore
