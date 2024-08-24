@@ -14,3 +14,7 @@ poetry install
 poetry shell
 reflex run
 ```
+
+## Design
+
+![My Daily Propaganda graph design](docs/mydailyprop_design.png)
