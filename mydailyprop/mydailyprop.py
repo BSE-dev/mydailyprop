@@ -1,11 +1,12 @@
-"""Welcome to Reflex! This file outlines the steps to create a basic app."""
+"""My Daily Propaganda App."""
 
 from operator import add
 import os
 from typing import Annotated, Any, AsyncGenerator, Dict, List
 from typing_extensions import TypedDict
 from langchain_core.pydantic_v1 import BaseModel, Field
-
+# from io import BytesIO
+# from PIL import Image  # type: ignore
 from langgraph.graph import StateGraph
 from langchain_openai import ChatOpenAI
 from langchain import hub
@@ -13,9 +14,8 @@ from langchain_community.document_loaders import FireCrawlLoader
 import reflex as rx  # type: ignore
 # Reflex does not provide type hints at the moment
 
-model = ChatOpenAI(model='gpt-3.5-turbo', temperature=0.7, streaming=True)
-# model = ChatOpenAI(model='gpt-4o', temperature=0.7, streaming=True)
-# TODO use gpt-4 for get_contents (better results)
+model_name = "gpt-4o-mini"
+model = ChatOpenAI(model=model_name, temperature=0.7, streaming=True)
 
 
 class Editorial(BaseModel):
@@ -129,6 +129,9 @@ graph_builder.add_edge("psychological", "synthesis")
 graph_builder.set_finish_point("synthesis")
 graph = graph_builder.compile()
 
+# img_data = graph.get_graph().draw_mermaid_png()
+# img = Image.open(BytesIO(img_data))
+# img.show()
 
 class DecryptState(rx.State):  # type: ignore
     """The app state."""
@@ -155,12 +158,19 @@ class DecryptState(rx.State):  # type: ignore
             self.cards = {**new_dict_entry, **self.cards}
 
     async def decrypt(self) -> AsyncGenerator[None, None]:
+        """Decrypt the URL contents."""
 
         self.is_running = True
         # reset the cards
         self.cards = {}
         yield
 
+        # return if url is empty
+        if not self.url:
+            self.is_running = False
+            return
+
+        # invoke graph with the URL
         async for event in graph.astream_events(
             {"url":  self.url},
             version="v2"
@@ -175,19 +185,19 @@ class DecryptState(rx.State):  # type: ignore
                     if origin_node == "critique":
                         self.upsert_card(
                             card_name="critique",
-                            card_desc="Critique journalistique (générée)",
+                            card_desc="Journalistic evaluation (generated)",
                             card_content=content,
                             color_scheme="indigo")
                     elif origin_node == "psychological":
                         self.upsert_card(
                             card_name="psychological",
-                            card_desc="Analyse psychologique (générée)",
+                            card_desc="Psychological analysis (generated)",
                             card_content=content,
                             color_scheme="mint")
                     elif origin_node == "synthesis":
                         self.upsert_card(
                             card_name="synthesis",
-                            card_desc="Synthèse propagande (générée)",
+                            card_desc="Propaganda synthesis (generated)",
                             card_content=content,
                             color_scheme="crimson")
                     yield
@@ -200,10 +210,10 @@ class DecryptState(rx.State):  # type: ignore
                     edito_dict = event["data"]['output'].tool_calls[0]['args']
                     self.upsert_card(
                         card_name="editorial",
-                        card_desc="Contenu de l'édito (récupéré)",
+                        card_desc="Editorial contents (extracted)",
                         card_content=Editorial(**edito_dict).markdown(),
                         color_scheme="blue")
-                    yield
+            yield
 
         self.is_running = False
 
@@ -225,16 +235,22 @@ def action_bar() -> rx.Component:
 
 
 def content_card(card_contents: List[Any]) -> rx.Component:
-    return rx.card(
-        rx.heading(
-            card_contents[1]["desc"],
-            color_scheme=card_contents[1]["color_scheme"],
-            size="3"),
-        rx.text(
-            rx.markdown(card_contents[1]["content"]),
-            color_scheme=card_contents[1]["color_scheme"],),
-        max_height="200px",
-        overflow="auto",
+    return rx.scroll_area(
+        rx.card(
+            rx.heading(
+                card_contents[1]["desc"],
+                color_scheme=card_contents[1]["color_scheme"],
+                size="3"
+            ),
+            rx.text(
+                rx.markdown(card_contents[1]["content"]),
+                color_scheme=card_contents[1]["color_scheme"],
+            ),
+            size="3",
+        ),
+        type="always",
+        scrollbars="vertical",
+        style={"height": 250},
     )
 
 
@@ -249,6 +265,13 @@ def index() -> rx.Component:
                 size="5",
             ),
             action_bar(),
+            rx.text(
+                f"All contents generated using {model_name!r}, \
+                and may be human-level BS.",
+                align="center",
+                color_scheme="gray",
+                size="1",
+            ),
             rx.foreach(
                 DecryptState.cards,
                 content_card,

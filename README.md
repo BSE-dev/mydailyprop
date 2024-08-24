@@ -1,6 +1,6 @@
 # My Daily Propaganda
 
-A simple propaganda analysis tool build from Reflex and LangGraph.
+A simple propaganda analysis tool built from Reflex and LangGraph.
 
 ## Install
 
