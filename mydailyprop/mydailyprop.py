@@ -20,7 +20,9 @@ model = ChatOpenAI(model=model_name, temperature=0.7, streaming=True)
 
 class Editorial(BaseModel):
     title: str = Field(..., title="Editorial title")
-    date: str = Field(..., title="Editorial publication date")
+    date: str = Field(
+        ...,
+        title="Editorial publication date in the format: DD/MM-YYYY")
     lede: str = Field(..., title="Editorial lede")
     body: str = Field(
         ...,
@@ -33,11 +35,15 @@ class Editorial(BaseModel):
 
 class GraphState(TypedDict):
 
-    url:                    Annotated[str, add]
-    editorial:              Annotated[Editorial, add]
-    news_critique:          Annotated[str, add]
-    psychological_analysis: Annotated[str, add]
+    url:                    str
+    editorial:              Editorial
+    news_critique:          str
+    psychological_analysis: str
     propaganda_synthesis:   Annotated[str, add]
+    # having multiple edges requires at least one Annotated type hint (at
+    # least one reducer must be defined - though none will be used here as each
+    # node has its own state variable in news_critique and
+    # psychological_analysis)
 
 
 # 'get_contents' Node
@@ -123,10 +129,10 @@ graph_builder.add_node("psychological", _psychological)
 graph_builder.add_edge("get_contents", "psychological")
 
 graph_builder.add_node("synthesis", _synthesis)
-graph_builder.add_edge("critique", "synthesis")
-graph_builder.add_edge("psychological", "synthesis")
+graph_builder.add_edge(["critique", "psychological"], "synthesis")
 
 graph_builder.set_finish_point("synthesis")
+
 graph = graph_builder.compile()
 
 # img_data = graph.get_graph().draw_mermaid_png()
@@ -134,8 +140,8 @@ graph = graph_builder.compile()
 # img.show()
 
 
-class DecryptState(rx.State):  # type: ignore
-    """The app state."""
+class AppState(rx.State):  # type: ignore
+    """The Reflex app state."""
 
     url: str = ""
     is_running: bool = False
@@ -223,35 +229,34 @@ def action_bar() -> rx.Component:
     return rx.hstack(
         rx.input(
             placeholder="Enter URL here...",
-            on_change=DecryptState.set_url,
+            on_change=AppState.set_url,
             flex_grow="1",
         ),
         rx.button(
             "decrypt",
-            on_click=DecryptState.decrypt,
-            loading=DecryptState.is_running,
+            on_click=AppState.decrypt,
+            loading=AppState.is_running,
         ),
         width="80%",
     )
 
 
 def content_card(card_contents: List[Any]) -> rx.Component:
-    return rx.scroll_area(
-        rx.card(
+    return rx.card(
+        rx.scroll_area(
             rx.heading(
                 card_contents[1]["desc"],
                 color_scheme=card_contents[1]["color_scheme"],
                 size="3"
             ),
-            rx.text(
-                rx.markdown(card_contents[1]["content"]),
-                color_scheme=card_contents[1]["color_scheme"],
+            rx.markdown(
+                card_contents[1]["content"],
+                width="98%",
             ),
-            size="3",
+            type="always",
+            scrollbars="vertical",
+            style={"height": 250},
         ),
-        type="always",
-        scrollbars="vertical",
-        style={"height": 250},
     )
 
 
@@ -274,7 +279,7 @@ def index() -> rx.Component:
                 size="1",
             ),
             rx.foreach(
-                DecryptState.cards,
+                AppState.cards,
                 content_card,
             ),
             spacing="5",
