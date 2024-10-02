@@ -1,5 +1,6 @@
 """My Daily Propaganda App."""
 
+from enum import Enum
 from operator import add
 import os
 from typing import Annotated, Any, AsyncGenerator, Dict, List
@@ -18,19 +19,67 @@ model_name = "gpt-4o-mini"
 model = ChatOpenAI(model=model_name, temperature=0.7, streaming=True)
 
 
+class NewsOutlet(str, Enum):
+    LEMONDE = (
+        "Le Monde",
+        """Le Monde is a French daily newspaper.
+It publishes a daily editorial that is signed 'Le Monde'.
+Not signed because it represents the views of the entire newspaper, the \
+editorial is typically written by one of the four editorial writers of the \
+editorial team after a collective process of selecting and taking a stance on \
+a current issue."""
+    )
+    THEGUARDIAN = (
+        "The Guardian",
+        """The Guardian is a British daily newspaper.
+It publishes two daily editorial pieces titled 'The Guardian view on...', \
+which are both unsigned.
+Though the piece is written mainly by a single author, it is produced through \
+a collaborative process involving other journalists, subject specialists, and \
+the editor, ensuring that the final unsigned piece reflects a collective \
+viewpoint rather than individual opinions."""
+    )
+    LIBERATION = (
+        "Libération",
+        """Libération is a French daily newspaper.
+It publishes a daily editorial that is signed by a member of the editorial \
+board (may be the director)."""
+    )
+
+    def __new__(cls, value, editorial_context):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj._editorial_context = editorial_context
+        return obj
+
+    @property
+    def contextualize(self):
+        return self._editorial_context
+
+
 class Editorial(BaseModel):
-    title: str = Field(..., title="Editorial title")
+    title: str = Field(
+        ...,
+        title="Editorial title")
+    outlet: NewsOutlet = Field(
+        ...,
+        title="Outlet the editorial was published in")
     date: str = Field(
         ...,
         title="Editorial publication date in the format: DD/MM-YYYY")
-    lede: str = Field(..., title="Editorial lede")
+    language: str = Field(
+        ...,
+        title="Editorial language (i.e., 'English', 'French', ...)")
+    lede: str = Field(
+        ...,
+        title="Editorial lede")
     body: str = Field(
         ...,
-        title="Article body. Preserve the original paragraphs and sub-titles \
-            structure.")
+        title="Editorial body")
 
     def markdown(self) -> str:
-        return f"# {self.title}\n\n**{self.lede}**\n\n{self.body}"
+        return f"# {self.title} ({self.outlet.value}, {self.date} - \
+        {self.language})\n\n**{self.lede}**\n\n{self.body}"
 
 
 class GraphState(TypedDict):
@@ -76,10 +125,13 @@ _critique_chain = _critique_prompt | model
 
 
 def _critique(state: GraphState) -> dict[str, Any]:
+    edito = state["editorial"]
     critique = _critique_chain.invoke({
-        "editorial":    state["editorial"].markdown(),
-        "date":         state["editorial"].date}
-    )
+        "news_outlet":          edito.outlet,
+        "editorial_date":       edito.date,
+        "editorial_context":    edito.outlet.contextualize,
+        "editorial_content":    edito.markdown(),
+    })
     return {
         "news_critique": critique.content
     }
