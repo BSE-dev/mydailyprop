@@ -4,8 +4,8 @@ from enum import Enum
 from operator import add
 import os
 from typing import Annotated, Any, AsyncGenerator, Dict, List
+from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-from langchain_core.pydantic_v1 import BaseModel, Field
 # from io import BytesIO
 # from PIL import Image  # type: ignore
 from langgraph.graph import StateGraph
@@ -96,9 +96,8 @@ class GraphState(TypedDict):
 
 
 # 'get_contents' Node
-_get_contents_prompt = hub.pull("mydailyprop-get_contents")
-_get_contents_chain = _get_contents_prompt | model.with_structured_output(
-    Editorial)
+_get_contents_prompt = hub.pull("bse-guirriecp/mydailyprop-get_contents:1b432aae")
+_get_contents_chain = _get_contents_prompt | model
 
 
 def _get_contents(state: GraphState) -> dict[str, Any]:
@@ -110,9 +109,10 @@ def _get_contents(state: GraphState) -> dict[str, Any]:
     docs = loader.load()
     extracted_json_data = docs[0].page_content
 
-    editorial = _get_contents_chain.invoke({
+    editorial_dict = _get_contents_chain.invoke({
         "json_data": extracted_json_data, }
     )
+    editorial = Editorial.model_validate(editorial_dict)
 
     return {
         "editorial": editorial,
@@ -120,7 +120,7 @@ def _get_contents(state: GraphState) -> dict[str, Any]:
 
 
 # 'critique' Node
-_critique_prompt = hub.pull("mydailyprop-critique")
+_critique_prompt = hub.pull("bse-guirriecp/mydailyprop-critique:6cfa7e63")
 _critique_chain = _critique_prompt | model
 
 
@@ -138,7 +138,7 @@ def _critique(state: GraphState) -> dict[str, Any]:
 
 
 # 'psychological' Node
-_psychological_prompt = hub.pull("mydailyprop-psychological")
+_psychological_prompt = hub.pull("bse-guirriecp/mydailyprop-psychological:6e8ed776")
 _psychological_chain = _psychological_prompt | model
 
 
@@ -153,7 +153,7 @@ def _psychological(state: GraphState) -> dict[str, Any]:
 
 
 # 'synthesis' Node
-_synthesis_prompt = hub.pull("mydailyprop-synthesis")
+_synthesis_prompt = hub.pull("bse-guirriecp/mydailyprop-synthesis:59eb6122")
 _synthesis_chain = _synthesis_prompt | model
 
 

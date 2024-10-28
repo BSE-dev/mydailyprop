@@ -9,11 +9,10 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 reflex = "^0.5.5"
-langgraph = "^0.1.5"
-langchain-openai = "^0.1.14"
+langgraph = "^0.2.0"
+langchain-openai = "^0.2.0"
 firecrawl-py = "^0.0.20"
-langchain-community = "^0.2.6"
-langchainhub = "^0.1.20"
+langchain-community = "^0.3.0"
 
 [tool.poetry.group.dev]
 optional = true
