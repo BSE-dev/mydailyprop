@@ -10,5 +10,17 @@
                 "run",
             ],
         },
+        {
+            "name": "Reflex App - My Daily Propaganda with graph",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "reflex",
+            "args": [
+                "run",
+            ],
+            "env": {
+                "SHOW_GRAPH": "true",
+            },
+        },
     ]
 }
