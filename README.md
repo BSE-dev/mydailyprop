@@ -28,8 +28,8 @@ To install and configure My Daily Propaganda locally, follow these steps:
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/MyDailyPropaganda.git
-    cd MyDailyPropaganda
+    git clone https://github.com/your-username/mydailyprop.git
+    cd mydailyprop
     ```
 
 2. Install the dependencies with Poetry:
