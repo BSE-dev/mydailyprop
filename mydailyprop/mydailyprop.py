@@ -143,9 +143,11 @@ _psychological_chain = _psychological_prompt | model
 
 
 def _psychological(state: GraphState) -> dict[str, Any]:
+    edito = state["editorial"]
     psychological = _psychological_chain.invoke({
-        "editorial":    state["editorial"].markdown(),
-        "date":         state["editorial"].date, }
+        "news_outlet":  edito.outlet,
+        "editorial":    edito.markdown(),
+        "date":         edito.date, }
     )
     return {
         "psychological_analysis": psychological.content
@@ -158,9 +160,11 @@ _synthesis_chain = _synthesis_prompt | model
 
 
 def _synthesis(state: GraphState) -> dict[str, Any]:
+    edito = state["editorial"]
     synthesis = _synthesis_chain.invoke({
-        "editorial":        state["editorial"].markdown(),
-        "date":             state["editorial"].date,
+        "news_outlet":      edito.outlet,
+        "editorial":        edito.markdown(),
+        "date":             edito.date,
         "critique":         state["news_critique"],
         "psychological":    state["psychological_analysis"]}
     )
