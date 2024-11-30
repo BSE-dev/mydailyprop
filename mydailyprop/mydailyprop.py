@@ -6,8 +6,6 @@ import os
 from typing import Annotated, Any, AsyncGenerator, Dict, List
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-# from io import BytesIO
-# from PIL import Image  # type: ignore
 from langgraph.graph import StateGraph
 from langchain_openai import ChatOpenAI
 from langchain import hub
@@ -187,9 +185,20 @@ graph_builder.set_finish_point("synthesis")
 
 graph = graph_builder.compile()
 
-# img_data = graph.get_graph().draw_mermaid_png()
-# img = Image.open(BytesIO(img_data))
-# img.show()
+# Displays the graph LangGraph if 'SHOW_GRAPH' is true
+# in the environment variable
+if os.getenv("SHOW_GRAPH") == "true":
+    try:
+        from PIL import Image  # type: ignore
+        from io import BytesIO
+    except ImportError:
+        raise ImportError(
+            "Could not import PIL python package. "
+            "Please install it with `poetry install --with dev`."
+        )
+    img_data = graph.get_graph().draw_mermaid_png()
+    img = Image.open(BytesIO(img_data))
+    img.show()
 
 
 class AppState(rx.State):  # type: ignore
