@@ -1,0 +1,94 @@
+
+services:
+
+  langgraph-neo4j:
+    image: ${NEO4J_IMAGE}:${NEO4J_IMAGE_TAG}
+    container_name: langgraph-neo4j
+    ports:
+      - "${NEO4J_WEB_PORT}:${NEO4J_WEB_PORT}"
+      - "${NEO4J_BOLT_PORT}:${NEO4J_BOLT_PORT}"
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - shared-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  langgraph-redis:
+    image: ${REDIS_IMAGE}:${REDIS_IMAGE_TAG}
+    container_name: langgraph-redis
+    ports:
+      - "${REDIS_HOST_PORT}:${REDIS_CONTAINER_PORT}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: ${REDIS_HEALTHCHECK_INTERVAL}
+      timeout: ${REDIS_HEALTHCHECK_TIMEOUT}
+      retries: ${REDIS_HEALTHCHECK_RETRIES}
+
+  langgraph-postgres:
+    image: ${POSTGRES_IMAGE}:${POSTGRES_IMAGE_TAG}
+    container_name: langgraph-postgres
+    ports:
+      - "${POSTGRES_HOST_PORT}:${POSTGRES_CONTAINER_PORT}"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - langgraph-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      start_period: ${POSTGRES_HEALTHCHECK_START_PERIOD}
+      timeout: ${POSTGRES_HEALTHCHECK_TIMEOUT}
+      retries: ${POSTGRES_HEALTHCHECK_RETRIES}
+      interval: ${POSTGRES_HEALTHCHECK_INTERVAL}
+
+  # langgraph-api:
+  #   image: "${LANGGRAPH_API_IMAGE}"
+  #   ports:
+  #     - "${LANGGRAPH_API_HOST_PORT}:${LANGGRAPH_API_CONTAINER_PORT}"
+  #   depends_on:
+  #     langgraph-redis:
+  #       condition: service_healthy
+  #     langgraph-postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     REDIS_URI: redis://langgraph-redis:6379
+  #     OPENAI_API_KEY: "${OPENAI_API_KEY}"
+  #     LANGSMITH_API_KEY: "${LANGSMITH_API_KEY}"
+  #     POSTGRES_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@langgraph-postgres:5432/${POSTGRES_DB}?sslmode=disable
+
+  # neo4j-metrics:
+  #   container_name: neo4j-metrics
+  #   build:
+  #     context: ./neo4j_exporter
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "${NEO4J_METRICS_PORT}:${NEO4J_METRICS_PORT}"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - NEO4J_SERVICE=neo4j
+  #     - NEO4J_BOLT_PORT=${NEO4J_BOLT_PORT}
+  #     - NEO4J_METRICS_PORT=${NEO4J_METRICS_PORT}
+  #   networks:
+  #     - shared-network
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   restart: always
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  langgraph-data:
+
+networks:
+  shared-network:
+    driver: bridge
